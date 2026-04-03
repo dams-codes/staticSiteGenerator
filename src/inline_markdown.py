@@ -1,6 +1,7 @@
 from textnode import TextNode, TextType
 import re
 
+
 def split_nodes_delimiter(old_nodes, delimiter, text_type):
     newNodes = []
     for node in old_nodes:
@@ -12,30 +13,49 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
                 raise Exception("Invalid Markdown")
             for i, part in enumerate(splitOnDelimiter):
                 if len(part) == 0:
-                   continue 
+                    continue
                 if i % 2 == 0:
                     newNodes.append(TextNode(splitOnDelimiter[i], TextType.TEXT))
                 else:
-                    newNodes.append(TextNode(splitOnDelimiter[i], text_type))    
+                    newNodes.append(TextNode(splitOnDelimiter[i], text_type))
     return newNodes
 
+
 def split_nodes_image(old_nodes):
-    images = []
+    newNodes = []
     for node in old_nodes:
-        print(extract_markdown_images(node))
-        # splitOnImage = node.text.split("!", 1)
-        # for i, part in enumerate(splitOnImage):
-        #     print(i, part)
-    #         if len(part) == 0:
-    #             continue
-    #         if i % 2 == 0:
-    #             images.append(TextNode(splitOnImage[i], TextType.TEXT))
-    #         else:
-    #             images.append(TextNode(extract_markdown_images(splitOnImage[i]), TextType.IMAGE))
-    # return images
+        images = extract_markdown_images(node.text)
+        if node.text_type != TextType.TEXT:
+            newNodes.append(node)
+        else:
+            for image_alt, image_link in images:
+                splitOnDelimiter = node.text.split(f"![{image_alt}]({image_link})", 1)
+                if splitOnDelimiter[0] != "":
+                    newNodes.append(TextNode(splitOnDelimiter[0], TextType.TEXT))
+                newNodes.append(TextNode(image_alt, TextType.IMAGE, image_link))
+                node = TextNode(splitOnDelimiter[1], TextType.TEXT)
+            if len(node.text) != 0:
+                newNodes.append(node)
+    return newNodes
+
 
 def split_nodes_link(old_nodes):
-    pass
+    newNodes = []
+    for node in old_nodes:
+        links = extract_markdown_links(node.text)
+        if node.text_type != TextType.TEXT:
+            newNodes.append(node)
+        else:
+            for link_alt, link_link in links:
+                splitOnDelimiter = node.text.split(f"[{link_alt}]({link_link})", 1)
+                if splitOnDelimiter[0] != "":
+                    newNodes.append(TextNode(splitOnDelimiter[0], TextType.TEXT))
+                newNodes.append(TextNode(link_alt, TextType.LINK, link_link))
+                node = TextNode(splitOnDelimiter[1], TextType.TEXT)
+            if len(node.text) != 0:
+                newNodes.append(node)
+    return newNodes
+
 
 def extract_markdown_images(text):
     pattern = r"!\[([^\[\]]*)\]\(([^\(\)]*)\)"
@@ -47,6 +67,7 @@ def extract_markdown_links(text):
     pattern = r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)"
     matches = re.findall(pattern, text)
     return matches
+
 
 def main():
     # node = TextNode("This is text with a `code block` word", TextType.TEXT)
@@ -66,7 +87,13 @@ def main():
         TextType.TEXT,
     )
     new_nodes = split_nodes_image([node])
-    print(new_nodes)
+    node2 = TextNode(
+        "Hello ![cat](http://cat.png) world",
+        TextType.TEXT,
+    )
+    new_nodes2 = split_nodes_image([node2])
+    print(new_nodes2)
+
 
 if __name__ == "__main__":
     main()
